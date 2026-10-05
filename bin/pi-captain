@@ -12,5 +12,6 @@ if [ -f "$ENV_FILE" ]; then
   set +a
 fi
 
+export PI_NO_DESKTOP_NOTIFY=1
 export PI_CAPTAIN_MODEL="${PI_CAPTAIN_MODEL:-agnes/agnes-2.5-flash}"
 exec "$HOME/pi-src/pi-test.sh" captain ${PI_CAPTAIN_SESSION:+$PI_CAPTAIN_SESSION}

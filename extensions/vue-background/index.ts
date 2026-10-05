@@ -18,8 +18,11 @@ const RESET_BACKGROUND = "\x1b]111\x07";
 
 export default function (pi: ExtensionAPI) {
 	let painted = false;
+	/** Only an interactive TTY gets the background: `-p`/piped output must stay clean. */
+	const interactive = (): boolean => process.stdout.isTTY === true && process.env.PI_PRINT_MODE !== "1";
+
 	const paint = (): void => {
-		if (painted) return;
+		if (painted || !interactive()) return;
 		painted = true;
 		try {
 			process.stdout.write(SET_BACKGROUND);
