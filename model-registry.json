@@ -84,10 +84,11 @@
     },
     "openrouter": {
       "provider": "openrouter",
-      "note": "Keep money in it, keep it UNUSED: expensive. Last resort only.",
+      "note": "Keep money in it, keep it UNUSED: expensive. | unavailable: no OPENROUTER_API_KEY (also blocked by the ban-openrouter whitelist).",
       "budget": "metered",
       "cost": "high",
-      "quality": "usable"
+      "quality": "usable",
+      "available": false
     },
     "opencode-zen-free": {
       "provider": "opencode-zen-free",
