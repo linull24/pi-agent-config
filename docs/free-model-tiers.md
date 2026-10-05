@@ -129,6 +129,32 @@ Quotas, keys, renewals and overage/abuse are a *job of their own*, so they get t
 
 Consumers: the acceptable selector reads the registry the maintenance role keeps fresh.
 
+
+## 3d. Cost must include **caching**
+
+Effective cost is not `price_in * tokens_in`; it is a function of cache behaviour:
+
+- **Token classes**: `input` (cache miss), `output`, `cacheRead`, `cacheWrite`. Providers price them
+  very differently — e.g. cache *reads* are often ~10x cheaper than fresh input, while cache *writes*
+  can cost a premium (Anthropic-style write surcharge; OpenAI/DeepSeek discount cached input).
+- **TTL**: prompt caches expire quickly (often minutes). A cache only pays off when the same prefix is
+  reused soon.
+- **Switching costs are hidden but real**: changing model/provider **invalidates the warm cache**, so a
+  failover/escalation that looks cheap can re-pay full input price for the whole context. Model choice
+  therefore has a **cache-locality** term:
+  - stay on the current model within a turn/session ⇒ cache reads (cheap);
+  - hop to another provider ⇒ cache miss + cache write (expensive), on top of the new provider's price.
+- **Cache hit rate is a per-source health signal**: a source with a poor hit rate is more expensive than
+  its sticker price suggests. The registry should carry `cache: { readPrice, writePrice, ttl, hitRate }`
+  and the acceptable selector should use **effectiveCost(input, output, cacheRead, cacheWrite, ttl,
+  locality)** — not list price.
+
+Practical consequences:
+- Prefer **staying** on one model for a session unless a switch is justified by availability or a real
+  quality floor, precisely because switching drops the cache.
+- Our own usage records already carry `cacheRead`/`cacheWrite`, so a per-source `effectiveCost` can be
+  computed and fed back into the registry (subscription-maintenance role).
+
 ## 4. Acceptance for the first cut (task #1)
 
 1. A registry listing free models with `source`, `quality`, `provider`, `model`, `enabled`.
