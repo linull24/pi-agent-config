@@ -250,7 +250,15 @@ function getPiInvocation(args: string[]): { command: string; args: string[] } {
 	const currentScript = process.argv[1];
 	const isBunVirtualScript = currentScript?.startsWith("/$bunfs/root/");
 	if (currentScript && !isBunVirtualScript && fs.existsSync(currentScript)) {
-		return { command: process.execPath, args: [currentScript, ...args] };
+		// Re-launch through the same interpreter, but carry the parent's node flags too: they live in
+		// `execArgv`, not in `argv`. The pi fork boots with `--import .../source-resolver.ts`; dropping
+		// it makes the child resolve workspace packages to a missing `dist/` and die with
+		// ERR_MODULE_NOT_FOUND before it can do any work. `-e`/`-p` are stripped so a stray eval flag
+		// can never suppress the real script.
+		const inheritedFlags = process.execArgv.filter(
+			(flag) => flag !== "-e" && flag !== "--eval" && flag !== "-p" && flag !== "--print",
+		);
+		return { command: process.execPath, args: [...inheritedFlags, currentScript, ...args] };
 	}
 
 	const execName = path.basename(process.execPath).toLowerCase();
