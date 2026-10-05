@@ -121,13 +121,42 @@ survives the next restart.
 | side channel | user | `emitAgentNotification` (out) + durable `pi.question` (in) |
 | secrets / credentials | user | never copied into C; read at request time only |
 
-### Mechanism v0 (what to build)
-1. **C playground**: worktree (`<repo>/.pi/worktrees/agent-*`) + a C-local extension/config overlay,
-   with automode exempt inside C. (Worktree isolation already exists for dispatched agents.)
-2. **Promotion** `/promote`: diff C → apply to A → `heartbeat` checkpoint → verify (alive + tests) →
-   keep, else rollback. Sensitive surfaces (credentials, channel registration, safety rules) require
-   explicit user approval.
-3. **Side channel**:
+### A ↔ C relationship (corrected)
+- **C is a derived overlay**: `C = A ⊕ Δ` — A's base plus C's own extension/config overlay and an
+  isolated worktree. C reads A; C **never writes A**.
+- **C publishes a subset increment Δ** (a declared, reviewable delta). Publishing is all C can do.
+- **A is the applier.** The *update action belongs to A, not C*: A **pulls** Δ, validates it, obtains
+  authorization, applies it under a checkpoint, verifies, and keeps or rolls back. The trusted side
+  performs the mutation; C is untrusted input. (Security: a playground that can write the base is not
+  a playground.)
+
+### Authorization is an independent axis — three tiers
+Authorization is neither part of C nor part of the promotion mechanism. It is a separate, pluggable
+decision surface. A delta declares the tier it requires.
+
+| Tier | Trigger | Use for |
+|---|---|---|
+| **T1 — explicit user** | an IM reply/button, a notification action, or a TUI operation | high risk, irreversible, touches credentials or the outside world |
+| **T2 — semantic / spec** | the delta conforms to a declared spec or policy (a deterministic check, or an independent reviewer) | medium risk with a machine-checkable rule |
+| **T3 — main-agent judgment** | the agent decides on its own | low risk, reversible, internal-only |
+
+Authorization providers are pluggable and independent of the transport: IM in (the side channel), a
+notification action button, a TUI confirm, or a config rule that auto-approves T2/T3.
+
+### Δ (the increment) and the applier
+- Δ = `{ files, manifest }`; the manifest declares `scope`, `riskClass`, `requiredTier`, `verify`.
+- Applier = an A-side component (`pi promote`): read Δ → run the T2 policy check → resolve the
+  required tier → obtain T1/T3 authorization → `heartbeat` checkpoint → apply to A → verify → keep,
+  else roll back.
+
+### Mechanism v1 (what to build)
+1. **C playground**: a worktree (`<repo>/.pi/worktrees/agent-*`) plus a C-local extension/config
+   overlay, automode-exempt inside C. (Worktree isolation already exists for dispatched agents.)
+2. **Δ publish**: C writes a manifest + files; it does not touch A.
+3. **Applier** (`pi promote`, A-side): pull Δ → policy (T2) → tier → authorize → checkpoint → apply →
+   verify.
+4. **Side channel**:
    - out: `registerNotificationChannel(imChannel)` — QQ bot via the bot API (or a local bridge);
    - in: a bridge receives IM messages and writes to the durable channel — answer a pending
      `pi.question` (reuse `Questions`), else submit a new instruction to the session.
+   - `experimental/side-channel.ts` already provides the transport-agnostic core.
