@@ -63,8 +63,7 @@
     },
     "planner": {
       "model": [
-        "openai-codex/gpt-6-astra",
-        "openai/gpt-6-astra"
+        "deepseek/deepseek-flash"
       ],
       "prompt": "planner/prompt.md",
       "agent": {
@@ -79,8 +78,7 @@
     },
     "reviewer": {
       "model": [
-        "openai-codex/gpt-6-astra",
-        "openai/gpt-6-astra"
+        "deepseek/deepseek-flash"
       ],
       "prompt": "reviewer/prompt.md",
       "agent": {
@@ -105,8 +103,7 @@
     },
     "researcher": {
       "model": [
-        "openai-codex/gpt-6-astra",
-        "openai/gpt-6-astra"
+        "deepseek/deepseek-flash"
       ],
       "prompt": "researcher/prompt.md",
       "agent": {
@@ -116,7 +113,8 @@
           "grep",
           "find",
           "ls",
-          "bash"
+          "bash",
+          "web_search"
         ]
       }
     },
