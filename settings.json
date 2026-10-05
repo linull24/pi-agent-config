@@ -16,5 +16,6 @@
   ],
   "defaultProvider": "router",
   "defaultModel": "auto",
-  "defaultThinkingLevel": "medium"
+  "defaultThinkingLevel": "medium",
+  "theme": "vue"
 }
