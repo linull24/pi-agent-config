@@ -172,8 +172,9 @@ not declare its own requirement).
    IM out via notifications, IM in answers a durable `pi.question` or steers the session.
 
 ### Agent View: the C divider (future)
-The agents page keeps its activity-time sort and adds a **divider** separating **C's items** from
-pi's (A's) sessions; each section stays time-ordered. Because C is an independent process ("not our
-concern"), the page needs a **C source adapter** — registered like a channel adapter — that lists C's
-sessions/tasks, and an `origin` marker (`"pi" | "c"`) per entry. Open: section order, how a C item is
-identified, and whether the divider surfaces C's status.
+The agents page keeps its activity-time sort and adds a **divider**: **pi (A) sessions on top**,
+then **C below**. The C section is a **single entry** — one session, one entry point — not one row per
+gateway; the different gateways live *inside* that session and are visible to the LLM operating in C.
+Because C is an independent process ("not our concern"), the page needs a **C source adapter**
+(registered like a channel adapter) that yields the one C entry, plus an `origin` marker
+(`"pi" | "c"`).
