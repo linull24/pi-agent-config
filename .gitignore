@@ -36,3 +36,4 @@ agents/
 # OS / editor
 .DS_Store
 goals/
+supervisor/
