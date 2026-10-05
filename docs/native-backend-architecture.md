@@ -64,3 +64,22 @@ Principles:
   path + view pending, see step 2).
 - Goal status bar shows the active goal (config `de1e7b9`); **goal is still file-based → must move to
   `pi.goal` durable doc** under step 1.
+
+## Assistant/supervisor boundaries (clean split)
+
+Independent model work must be split by **how much context it may share**:
+
+| Consumer | Session | Rationale |
+|---|---|---|
+| **Security review** (automode classifier, danger-monitor) | **independent**, own session | must not be influenced by the working session's context; it gates actions |
+| **Goal supervision** (met / not-met / impossible / blocked) | **reuse** the same supervisor session as hint | both read the conversation and judge/assist; no need for isolation |
+| **Hint** (likely user replies / next steps) | **reuse** the goal-supervisor session | same context, different prompt; one long-lived session avoids per-call cost |
+
+Rules:
+- **Hint auto-triggers after a turn ends** (client poller on the current session's transition to
+  `needs-instructions`), and **Tab auto-completes** the composer with the top suggestion
+  (Tab again cycles).
+- Goal evaluation and hint share one role/model (`hint` role; mirrors the goal supervisor) — and in
+  future one long-lived session rather than a fresh process per call.
+- Security review stays independent (already true: `@czottmann/pi-automode` classifier runs in its
+  own context).
