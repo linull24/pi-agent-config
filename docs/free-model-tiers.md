@@ -73,6 +73,36 @@ So selection is **constraint comparison**, not ordering:
 This replaces "fallback chain" as the mental model; a role/registry may still *list* candidates in a
 preferred order, but resolution is `acceptable`-based with an explicit objective.
 
+
+## 3c. Provider **budget types** (user taxonomy)
+
+Each provider has a budget *type* — how money/quota behaves — not just "free/expensive". Two derived
+facts matter for selection: **marginal cost** (what one more token costs) and **conserve** (should we
+ration it).
+
+| # | Budget type | Marginal cost | Conserve? | Behaviour |
+|---|---|---|---|---|
+| 1 | **daily-free** | 0 within today's quota; blocked after | yes (resets daily) | free allowance per day (e.g. DeepSeek 5B/day, Groq/Z.AI/Cerebras free tiers) |
+| 2 | **one-time-free** | 0 until the credit is spent | yes (finite) | signup/trial credit; gone when depleted |
+| 3 | **metered (time-variant)** | token price; may change by time of day | yes (money) | pay-per-use; prefer off-peak when the discount is known |
+| 4 | **subscription-flat** | ~0 (already paid) | **NO — use it** (白用白不用) | flat plan; unused capacity is wasted, so prefer it |
+| 5 | **subscription-overage** | 0 within the plan, then metered | yes near the limit | use freely up to the cap, then control |
+| 6 | **shared-pool** | 0 but shared with friends | yes (fairness) | a pooled quota; ration to stay fair |
+| 7 | **own-relay** | ~0 (self-hosted) | **NO** | own relay/proxy; use freely |
+
+**Derived fields per provider**: `budget` (the type above) + `quota` (daily amount / remaining credit /
+plan size / shared share / unlimited) + `conserve` (derived: true for 1,2,3,5,6; false for 4,7).
+
+These feed the **acceptable** selector:
+- `subscription-flat` and `own-relay` ⇒ cost ≈ 0 AND conserve = false ⇒ **prefer them first**.
+- `daily-free` / `one-time-free` / `shared-pool` ⇒ cost ≈ 0 but conserve = true ⇒ use within budget,
+  watch the quota.
+- `metered` (esp. OpenRouter) ⇒ real money, conserve = true ⇒ **last resort**.
+- Availability failure (quota exhausted / 429) ⇒ not acceptable right now ⇒ escalate (e.g. DeepSeek
+  out of money → GPT).
+
+Note `cost` in the acceptable model is therefore **not** a static tier but `(budgetType, quotaLeft)`.
+
 ## 4. Acceptance for the first cut (task #1)
 
 1. A registry listing free models with `source`, `quality`, `provider`, `model`, `enabled`.
