@@ -11,7 +11,7 @@ rewrite of a giant document.
 ```jsonc
 {
   "id": "b_01J...",              // stable, unique; also the Logseq block uuid later
-  "kind": "conversation | turn | instruction | evidence | plan | plan-step | note | …",
+  "kind": "conversation | turn | instruction | commitment | plan | plan-step | note | …",
   "title": "short label",
   "body": "text…",              // or a structured body for machine blocks
   "parent": "b_parent | null",   // NESTING (structural, ordered)
@@ -41,6 +41,7 @@ rewrite of a giant document.
 | rel | meaning |
 |---|---|
 | `refer` | generic "see also" (default) |
+| `commit` / `fulfil` / `release` / `violate` | the commitment lifecycle (see below) |
 | `at` | `@`-mention of an agent/session (public addressing; the target is woken by a query) |
 | `cites` / `citedBy` | evidence ↔ claim |
 | `derives` / `derivedFrom` | plan → step, output → input |
@@ -59,7 +60,7 @@ exactly one truth per link.
 | long conversation | `conversation` | root block; `children` = turns |
 | instruction (instruct) | `instruction` | `props.status`; may nest sub-instructions |
 | the **last turn's messages** | `turn` | `props.role` (user/assistant), `props.seq`; `refs` → evidence |
-| evidence file | `evidence` | `props.path`, `props.hash`; body = extracted text/summary |
+| ~~evidence file~~ → **commitment** | `commitment` | REPLACED BY USER: an undertaking, not evidence. `props.status` (open/fulfilled/released/violated), `props.due`, mentions the counterparty |
 | plan decomposition | `plan` + `plan-step` | `plan` nests `plan-step`s; steps `derives`-ref each other |
 
 So a session reads/writes blocks: append a `turn`, attach `evidence`, nest a `plan-step`, add a
@@ -103,3 +104,20 @@ Open questions to settle before coding:
 2. **Who may write which kind?** (users/turns/plans/evidence — same rules for all, or per-kind?)
 3. **Delete vs tombstone?** (append-only-ish with `supersedes`, or hard delete?)
 4. **Body format**: free text, or a typed body per kind (e.g. a turn has role/seq/content)?
+
+## 7. Commitments, not evidence (user)
+
+`evidence` is **rejected**. The unit is a **commitment**: an undertaking someone takes, with a
+lifecycle and a counterparty — not a proof file.
+
+- `kind: "commitment"`; `props.status`: `open | fulfilled | released | violated`; `props.due`.
+- Relations: `commit` (undertake), `fulfil`, `release`, `violate`; the counterparty is a **public
+  `@`-mention** (everyone can see the promise).
+- The work that satisfies a commitment links back with `fulfil`; a plan step links with `implements`.
+- So the blackboard tracks *who owes what to whom* instead of accumulating proof.
+
+## 8. Passing content with `[[block]]` (user)
+
+Sessions that share the blackboard pass content **by reference, never by copy**: a body may contain
+`[[block:<id>]]` (or `[[<id>]]`), resolved to the referenced block when read. That is the Logseq
+`((block))` / `[[page]]` behaviour, and it is why one namespace beats a message queue.
