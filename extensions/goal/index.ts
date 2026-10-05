@@ -239,7 +239,7 @@ export default function (pi: ExtensionAPI) {
 		// Carry the condition over; reset the turn count and timer baseline.
 		const restored: GoalState = { active: true, condition: state.condition, since: Date.now(), verdicts: 0 };
 		writeGoal(sessionId, restored);
-		if (ctx.hasUI) ctx.ui.setStatus("goal", "◎ /goal active (restored)");
+		if (ctx.hasUI) ctx.ui.setStatus("goal", `◎ goal: ${state.condition}`);
 		ctx.ui.notify(`◎ goal restored — ${state.condition}`, "info");
 	});
 
@@ -278,7 +278,7 @@ export default function (pi: ExtensionAPI) {
 
 		const next: GoalState = { ...state, verdicts: state.verdicts + 1, lastReason: verdict.reason };
 		writeGoal(sessionId, next);
-		if (ctx.hasUI) ctx.ui.setStatus("goal", `◎ /goal active · turn ${next.verdicts}/${MAX_VERDICTS}`);
+		if (ctx.hasUI) ctx.ui.setStatus("goal", `◎ goal (turn ${next.verdicts}): ${state.condition}`);
 		return {
 			entries: [
 				{
@@ -328,7 +328,7 @@ export default function (pi: ExtensionAPI) {
 				return { content: [{ type: "text", text: "action=set requires a non-empty condition" }], details: {} };
 			}
 			writeGoal(sessionId, { active: true, condition, since: Date.now(), verdicts: 0 });
-			if (ctx.hasUI) ctx.ui.setStatus("goal", "◎ /goal active · turn 0/25");
+			if (ctx.hasUI) ctx.ui.setStatus("goal", `◎ goal: ${condition}`);
 			return {
 				content: [
 					{
@@ -364,7 +364,7 @@ export default function (pi: ExtensionAPI) {
 				return;
 			}
 			writeGoal(sessionId, { active: true, condition: text, since: Date.now(), verdicts: 0 });
-			if (ctx.hasUI) ctx.ui.setStatus("goal", "◎ /goal active · turn 0/25");
+			if (ctx.hasUI) ctx.ui.setStatus("goal", `◎ goal: ${text}`);
 			ctx.ui.notify(`◎ goal set — ${text}`, "info");
 			// Setting a goal starts a turn immediately, with the condition as the directive.
 			pi.sendUserMessage(text);
