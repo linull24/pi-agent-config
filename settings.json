@@ -9,7 +9,8 @@
     "npm:@fradser/pi-monitor",
     "npm:@monotykamary/pi-supervisor",
     "npm:@czottmann/pi-automode",
-    "npm:pi-scratchpad"
+    "npm:pi-scratchpad",
+    "npm:@juicesharp/rpiv-ask-user-question"
   ],
   "defaultProvider": "router",
   "defaultModel": "auto",

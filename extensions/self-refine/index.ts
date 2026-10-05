@@ -115,6 +115,11 @@ export default function (pi: ExtensionAPI) {
 	/** Self-critique passes used in the current turn. */
 	let passes = 0;
 
+	// Show the mode in the footer on resume.
+	pi.on("session_start", (_event, ctx) => {
+		if (readSelfRefine().active && ctx.hasUI) ctx.ui.setStatus("selfrefine", "self-refine: on");
+	});
+
 	pi.on("agent_start", () => {
 		passes = 0;
 	});
@@ -133,6 +138,7 @@ export default function (pi: ExtensionAPI) {
 			return;
 		}
 		passes++;
+		if (ctx.hasUI) ctx.ui.setStatus("selfrefine", `self-refine: pass ${passes}/${MAX_PASSES}`);
 		return {
 			entries: [
 				{
@@ -163,6 +169,7 @@ export default function (pi: ExtensionAPI) {
 			if (action === "off") {
 				state.active = false;
 				writeSelfRefine(state);
+				ctx.ui.setStatus("selfrefine", undefined);
 				const reminder = state.suspendedAutomode
 					? " The auto-monitor is still suspended: run /autommonitor on to re-enable it."
 					: "";
@@ -204,6 +211,7 @@ export default function (pi: ExtensionAPI) {
 				},
 				{ deliverAs: "nextTurn" },
 			);
+			ctx.ui.setStatus("selfrefine", "self-refine: on");
 			ctx.ui.notify(`self-refine ON. ${note}. Automode suspended.`, "info");
 		},
 	});
