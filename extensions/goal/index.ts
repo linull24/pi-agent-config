@@ -10,9 +10,9 @@
  * met / not-met / impossible with a reason. not-met starts another turn with the reason as
  * guidance; met/impossible clears the goal.
  *
- * Goals are **session-scoped** and **resume with the session**: the condition is restored on
- * `session_start` (turn count and timer reset), like Claude Code. Achieved/cleared goals are not
- * restored. State: `~/.pi/agent/goals/<sessionId>.json`.
+ * State is **durable in the session**: the goal is stored as a `custom` session entry
+ * (`appendEntry("goal", …)`), so it resumes with the session and needs no side files. The condition
+ * is restored on `session_start` with the turn count/timer reset, like Claude Code.
  */
 
 import { spawn } from "node:child_process";
@@ -21,7 +21,6 @@ import * as path from "node:path";
 import { Type } from "typebox";
 import { getAgentDir, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 
-const GOALS_DIR = path.join(getAgentDir(), "goals");
 const EVALUATOR_MODEL = process.env.PI_GOAL_MODEL ?? "deepseek/deepseek-flash";
 /** Hard stop so a goal can never loop forever without a human. */
 const MAX_VERDICTS = 25;
@@ -32,38 +31,36 @@ type GoalState = {
 	since?: number;
 	verdicts: number;
 	lastReason?: string;
-	/** Set when the goal resolved. */
 	outcome?: "achieved" | "impossible" | "cleared";
 	at?: number;
 };
 
 type Verdict = { verdict: "met" | "not-met" | "impossible"; reason: string };
 
-function goalFile(sessionId: string): string {
-	const safe = sessionId.replace(/[^A-Za-z0-9._-]/g, "_") || "default";
-	return path.join(GOALS_DIR, `${safe}.json`);
-}
-
-function readGoal(sessionId: string): GoalState {
-	try {
-		const raw = JSON.parse(fs.readFileSync(goalFile(sessionId), "utf-8")) as Partial<GoalState>;
+/** The latest goal state recorded in the session, if any. */
+function readGoal(ctx: ExtensionContext | { sessionManager: ExtensionContext["sessionManager"] }): GoalState {
+	const branch = ctx.sessionManager.getBranch();
+	for (let i = branch.length - 1; i >= 0; i--) {
+		const entry = branch[i];
+		if (entry.type !== "custom" || entry.customType !== "goal") continue;
+		const data = (entry as { data?: Partial<GoalState> }).data;
+		if (data === undefined) continue;
 		return {
-			active: raw.active === true,
-			condition: raw.condition,
-			since: raw.since,
-			verdicts: raw.verdicts ?? 0,
-			lastReason: raw.lastReason,
-			outcome: raw.outcome,
-			at: raw.at,
+			active: data.active === true,
+			condition: data.condition,
+			since: data.since,
+			verdicts: data.verdicts ?? 0,
+			lastReason: data.lastReason,
+			outcome: data.outcome,
+			at: data.at,
 		};
-	} catch {
-		return { active: false, verdicts: 0 };
 	}
+	return { active: false, verdicts: 0 };
 }
 
-function writeGoal(sessionId: string, state: GoalState): void {
-	fs.mkdirSync(GOALS_DIR, { recursive: true });
-	fs.writeFileSync(goalFile(sessionId), `${JSON.stringify(state, null, 2)}\n`, "utf-8");
+/** Append the goal state as a durable session entry. */
+function writeGoal(pi: ExtensionAPI, state: GoalState): void {
+	pi.appendEntry("goal", state);
 }
 
 function formatDuration(ms: number): string {
@@ -73,30 +70,6 @@ function formatDuration(ms: number): string {
 	if (m < 60) return `${m}m`;
 	const h = Math.floor(m / 60);
 	return `${h}h${m % 60}m`;
-}
-
-/** The latest assistant text on the branch. */
-function lastAssistantText(ctx: ExtensionContext): string {
-	const branch = ctx.sessionManager.getBranch();
-	for (let i = branch.length - 1; i >= 0; i--) {
-		const entry = branch[i];
-		if (entry.type !== "message") continue;
-		const message = entry.message as { role?: string; content?: unknown };
-		if (message.role !== "assistant") continue;
-		const content = message.content;
-		if (typeof content === "string") return content;
-		if (Array.isArray(content)) {
-			return content
-				.flatMap((b) =>
-					b && typeof b === "object" && (b as { type?: string }).type === "text"
-						? [(b as { text?: string }).text ?? ""]
-						: [],
-				)
-				.join("");
-		}
-		return "";
-	}
-	return "";
 }
 
 /** A bounded plain-text view of the recent conversation for the evaluator. */
@@ -127,8 +100,7 @@ function recentTranscript(ctx: ExtensionContext, maxChars = 8000): string {
 }
 
 function piInvocation(args: string[]): { command: string; args: string[] } {
-	// Prefer the installed `pi` launcher: it sets up the source resolver and provider auth, which a
-	// bare `node <argv[1]>` invocation would miss.
+	// Prefer the installed `pi` launcher: it sets up the source resolver and provider auth.
 	const launcher = path.join(getAgentDir(), "bin", "pi");
 	if (fs.existsSync(launcher)) return { command: launcher, args };
 	return { command: "pi", args };
@@ -146,9 +118,7 @@ function extractText(output: string): string {
 			const content = event.message.content;
 			if (!Array.isArray(content)) continue;
 			const text = content
-				.filter(
-					(block) => block && typeof block === "object" && (block as { type?: string }).type === "text",
-				)
+				.filter((block) => block && typeof block === "object" && (block as { type?: string }).type === "text")
 				.map((block) => (block as { text?: string }).text ?? "")
 				.join("");
 			if (text.trim().length > 0) last = text;
@@ -231,26 +201,22 @@ function statusText(state: GoalState): string {
 }
 
 export default function (pi: ExtensionAPI) {
-	// Restore an active goal on every resume route (continue / --resume / picker).
+	// Restore an active goal on every resume route; carry the condition over, reset counters.
 	pi.on("session_start", (_event, ctx) => {
-		const sessionId = ctx.sessionManager.getSessionId();
-		const state = readGoal(sessionId);
+		const state = readGoal(ctx);
 		if (!state.active || state.condition === undefined) return;
-		// Carry the condition over; reset the turn count and timer baseline.
-		const restored: GoalState = { active: true, condition: state.condition, since: Date.now(), verdicts: 0 };
-		writeGoal(sessionId, restored);
+		writeGoal(pi, { active: true, condition: state.condition, since: Date.now(), verdicts: 0 });
 		if (ctx.hasUI) ctx.ui.setStatus("goal", `◎ goal: ${state.condition}`);
 		ctx.ui.notify(`◎ goal restored — ${state.condition}`, "info");
 	});
 
 	// After every completed turn, have an independent model judge the condition.
 	pi.on("agent_before_settle", async (event, ctx) => {
-		const sessionId = ctx.sessionManager.getSessionId();
-		const state = readGoal(sessionId);
+		const state = readGoal(ctx);
 		if (!state.active || state.condition === undefined) return;
 		if (event.outcome !== "completed") return;
 		if (state.verdicts >= MAX_VERDICTS) {
-			writeGoal(sessionId, { ...state, active: false, outcome: "cleared", at: Date.now() });
+			writeGoal(pi, { ...state, active: false, outcome: "cleared", at: Date.now() });
 			if (ctx.hasUI) ctx.ui.setStatus("goal", undefined);
 			ctx.ui.notify(`goal: paused after ${MAX_VERDICTS} turns without a met verdict`, "warning");
 			return;
@@ -259,7 +225,7 @@ export default function (pi: ExtensionAPI) {
 		const verdict = await evaluate(state.condition, recentTranscript(ctx), event.signal);
 
 		if (verdict.verdict === "met" || verdict.verdict === "impossible") {
-			writeGoal(sessionId, {
+			writeGoal(pi, {
 				active: false,
 				condition: state.condition,
 				since: state.since,
@@ -277,7 +243,7 @@ export default function (pi: ExtensionAPI) {
 		}
 
 		const next: GoalState = { ...state, verdicts: state.verdicts + 1, lastReason: verdict.reason };
-		writeGoal(sessionId, next);
+		writeGoal(pi, next);
 		if (ctx.hasUI) ctx.ui.setStatus("goal", `◎ goal (turn ${next.verdicts}): ${state.condition}`);
 		return {
 			entries: [
@@ -300,22 +266,20 @@ export default function (pi: ExtensionAPI) {
 			"Set, inspect, or clear a completion goal for this session.",
 			"While a goal is active an independent model judges after every turn whether the condition holds;",
 			"if it is not yet met it starts another turn with the reason, and it clears the goal when met or impossible.",
-			"Use it for substantial work with a verifiable end state (a test result, a build exit code, an empty queue).",
-			"Never self-declare completion — the evaluator decides.",
+			"Use it for substantial work with a verifiable end state. Never self-declare completion.",
 		].join(" "),
 		parameters: Type.Object({
 			action: Type.Union([Type.Literal("set"), Type.Literal("status"), Type.Literal("clear")]),
 			condition: Type.Optional(Type.String({ description: "Completion condition (required for action=set)." })),
 		}),
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-			const sessionId = ctx.sessionManager.getSessionId();
 			if (params.action === "status") {
-				return { content: [{ type: "text", text: statusText(readGoal(sessionId)) }], details: {} };
+				return { content: [{ type: "text", text: statusText(readGoal(ctx)) }], details: {} };
 			}
 			if (params.action === "clear") {
-				const state = readGoal(sessionId);
+				const state = readGoal(ctx);
 				if (state.active) {
-					writeGoal(sessionId, { ...state, active: false, outcome: "cleared", at: Date.now() });
+					writeGoal(pi, { ...state, active: false, outcome: "cleared", at: Date.now() });
 					if (ctx.hasUI) ctx.ui.setStatus("goal", undefined);
 				}
 				return {
@@ -327,7 +291,7 @@ export default function (pi: ExtensionAPI) {
 			if (condition.length === 0) {
 				return { content: [{ type: "text", text: "action=set requires a non-empty condition" }], details: {} };
 			}
-			writeGoal(sessionId, { active: true, condition, since: Date.now(), verdicts: 0 });
+			writeGoal(pi, { active: true, condition, since: Date.now(), verdicts: 0 });
 			if (ctx.hasUI) ctx.ui.setStatus("goal", `◎ goal: ${condition}`);
 			return {
 				content: [
@@ -344,9 +308,8 @@ export default function (pi: ExtensionAPI) {
 	pi.registerCommand("goal", {
 		description: "Keep working until a condition holds: /goal <condition> | /goal | /goal clear",
 		handler: async (args, ctx) => {
-			const sessionId = ctx.sessionManager.getSessionId();
 			const text = (args ?? "").trim();
-			const state = readGoal(sessionId);
+			const state = readGoal(ctx);
 			const clearAliases = new Set(["clear", "stop", "off", "reset", "none", "cancel"]);
 
 			if (clearAliases.has(text.toLowerCase())) {
@@ -354,16 +317,16 @@ export default function (pi: ExtensionAPI) {
 					ctx.ui.notify("No goal set", "info");
 					return;
 				}
-				writeGoal(sessionId, { ...state, active: false, outcome: "cleared", at: Date.now() });
+				writeGoal(pi, { ...state, active: false, outcome: "cleared", at: Date.now() });
 				if (ctx.hasUI) ctx.ui.setStatus("goal", undefined);
 				ctx.ui.notify(`Goal cleared: ${state.condition}`, "info");
 				return;
 			}
 			if (text.length === 0) {
-				ctx.ui.notify(`${statusText(state)}\nstate: ${goalFile(sessionId)}`, "info");
+				ctx.ui.notify(statusText(state), "info");
 				return;
 			}
-			writeGoal(sessionId, { active: true, condition: text, since: Date.now(), verdicts: 0 });
+			writeGoal(pi, { active: true, condition: text, since: Date.now(), verdicts: 0 });
 			if (ctx.hasUI) ctx.ui.setStatus("goal", `◎ goal: ${text}`);
 			ctx.ui.notify(`◎ goal set — ${text}`, "info");
 			// Setting a goal starts a turn immediately, with the condition as the directive.
