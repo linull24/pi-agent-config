@@ -84,3 +84,26 @@ A2A does **not** send private messages. You **mention** a target on a block:
 So the block carries addressing, not a transport: `mentions: ["@captain"]` (or a `refs` entry with
 `rel: "at"` pointing at an agent block). This keeps **one** mechanism: write a block, mention who it
 is for, let the query wake the right agent.
+
+## 6. Evaluated and rejected (tasks #6, #7)
+
+Our substrate is the **block blackboard** (one namespace + `@` + query subscriptions). The two
+third-party A2A systems were evaluated against that and are **not adopted**:
+
+### `omp-fabric` — actors / mailboxes / councils (REJECT)
+- It is a *programmable* mesh runtime: a QuickJS sandbox, durable **actors**, mailboxes/subscriptions,
+  councils, budgets — heavy (Node 24+, OMP 18.4.4+), and it brings its own runtime beside the agent.
+- Its useful ideas are already expressed here: an **actor** ≈ a session bound to the board, a
+  **mailbox** ≈ `blocks where mentions=@me`, a **topic** ≈ a page, a **council** ≈ several blocks
+  referencing one plan.
+- So: **borrow the concepts, not the runtime.** No new system.
+
+### `pi-teammate` / `agent-comms` (REJECT)
+- They are peer networks over a separate bus (SQLite file / TCP mesh, ports, gossip, coordinator
+  election) — i.e. exactly the "another messaging system" we decided against.
+- Cross-harness reach (Claude Code) is attractive but is a *transport* concern: if we ever need it, it
+  belongs behind one adapter that writes/reads blocks, not as a second source of truth.
+- So: **reject for now**; revisit only as a block transport.
+
+**Consequence**: A2A is one mechanism — write a block, `@`-mention (public), subscribe with a query.
+Nothing else to run.
