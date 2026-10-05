@@ -98,39 +98,45 @@
     },
     "cline-pass": {
       "provider": "cline-pass",
-      "note": "Free bucket with CLINE_API_KEY; honest (free) models marked by the catalog.",
+      "note": "Free bucket with CLINE_API_KEY; honest (free) models marked by the catalog. | unavailable: no CLINE_API_KEY.",
       "budget": "daily-free",
-      "quality": "usable"
+      "quality": "usable",
+      "available": false
     },
     "zai": {
       "provider": "zai",
-      "note": "glm-*-flash are free tier (ZAI_API_KEY).",
+      "note": "glm-*-flash are free tier (ZAI_API_KEY). | unavailable: no ZAI_API_KEY.",
       "budget": "daily-free",
-      "quality": "usable"
+      "quality": "usable",
+      "available": false
     },
     "groq": {
       "provider": "groq",
-      "note": "Free tier (GROQ_API_KEY): groq/compound, compound-mini.",
+      "note": "Free tier (GROQ_API_KEY): groq/compound, compound-mini. | unavailable: no GROQ_API_KEY.",
       "budget": "daily-free",
-      "quality": "usable"
+      "quality": "usable",
+      "available": false
     },
     "cerebras": {
       "provider": "cerebras",
-      "note": "Free tier (CEREBRAS_API_KEY).",
+      "note": "Free tier (CEREBRAS_API_KEY). | unavailable: no CEREBRAS_API_KEY.",
       "budget": "daily-free",
-      "quality": "usable"
+      "quality": "usable",
+      "available": false
     },
     "vercel-ai-gateway": {
       "provider": "vercel-ai-gateway",
-      "note": "AI_GATEWAY_API_KEY; *-free ids (one-time/free credits).",
+      "note": "AI_GATEWAY_API_KEY; *-free ids (one-time/free credits). | unavailable: no AI_GATEWAY_API_KEY.",
       "budget": "one-time-free",
-      "quality": "usable"
+      "quality": "usable",
+      "available": false
     },
     "local": {
       "provider": "ollama",
-      "note": "Local models (ollama / lm-studio): own relay, use freely.",
+      "note": "Local models (ollama / lm-studio): own relay, use freely. | unavailable: ollama/lm-studio not running.",
       "budget": "own-relay",
-      "quality": "usable"
+      "quality": "usable",
+      "available": false
     },
     "deepseek-shanghai": {
       "provider": "deepseek",
