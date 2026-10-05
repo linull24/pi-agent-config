@@ -121,42 +121,38 @@ survives the next restart.
 | side channel | user | `emitAgentNotification` (out) + durable `pi.question` (in) |
 | secrets / credentials | user | never copied into C; read at request time only |
 
-### A ↔ C relationship (corrected)
-- **C is a derived overlay**: `C = A ⊕ Δ` — A's base plus C's own extension/config overlay and an
-  isolated worktree. C reads A; C **never writes A**.
-- **C publishes a subset increment Δ** (a declared, reviewable delta). Publishing is all C can do.
-- **A is the applier.** The *update action belongs to A, not C*: A **pulls** Δ, validates it, obtains
-  authorization, applies it under a checkpoint, verifies, and keeps or rolls back. The trusted side
-  performs the mutation; C is untrusted input. (Security: a playground that can write the base is not
-  a playground.)
+### A ↔ C relationship (settled)
+- **C = A ⊕ Δ** — C is A's base plus C's own overlay (a git branch / worktree). C reads A; C has **no
+  write path into A**.
+- **Δ is git.** The increment is simply C's git diff/commit on its own branch — no bespoke delta
+  format, no spec language, no artifacts.
+- **C hands Δ to A; A applies it.** A consumes the diff into its own tree under its own commit. C
+  never writes A and never touches the A/B machinery.
+- **Then the traditional A/B runs** — the existing checkpoint/reload path, unchanged. The heartbeat
+  stays a clean resilience mechanism (checkpoint + verify + rollback); promotion is **not** bolted
+  onto it and does not pollute its protocol. No "dirty C proposes its commit straight into A/B".
 
-### Authorization is an independent axis — three tiers
-Authorization is neither part of C nor part of the promotion mechanism. It is a separate, pluggable
-decision surface. A delta declares the tier it requires.
+### Authorization is an independent abstraction (settled)
+Authorization is a separate axis, exposed **only as an abstract provider interface**. The design
+deliberately **excludes any evidence system**: no tickets, no hash binding, no audit artifacts.
+A provider answers a tiered yes / no / pending, and nothing else flows through it.
 
 | Tier | Trigger | Use for |
 |---|---|---|
-| **T1 — explicit user** | an IM reply/button, a notification action, or a TUI operation | high risk, irreversible, touches credentials or the outside world |
-| **T2 — semantic / spec** | the delta conforms to a declared spec or policy (a deterministic check, or an independent reviewer) | medium risk with a machine-checkable rule |
+| **T1 — explicit user** | an IM reply/button, a notification action, a TUI operation | high risk, irreversible, credentials, the outside world |
+| **T2 — semantic / spec** | the change conforms to a declared rule/spec | medium risk with a checkable rule |
 | **T3 — main-agent judgment** | the agent decides on its own | low risk, reversible, internal-only |
 
-Authorization providers are pluggable and independent of the transport: IM in (the side channel), a
-notification action button, a TUI confirm, or a config rule that auto-approves T2/T3.
+Providers are pluggable and independent of both C and the apply path. **A decides the tier** (C does
+not declare its own requirement).
 
-### Δ (the increment) and the applier
-- Δ = `{ files, manifest }`; the manifest declares `scope`, `riskClass`, `requiredTier`, `verify`.
-- Applier = an A-side component (`pi promote`): read Δ → run the T2 policy check → resolve the
-  required tier → obtain T1/T3 authorization → `heartbeat` checkpoint → apply to A → verify → keep,
-  else roll back.
+### Still open
+- **C lifecycle**: when C is created and destroyed, and where its branch lives.
 
-### Mechanism v1 (what to build)
-1. **C playground**: a worktree (`<repo>/.pi/worktrees/agent-*`) plus a C-local extension/config
-   overlay, automode-exempt inside C. (Worktree isolation already exists for dispatched agents.)
-2. **Δ publish**: C writes a manifest + files; it does not touch A.
-3. **Applier** (`pi promote`, A-side): pull Δ → policy (T2) → tier → authorize → checkpoint → apply →
-   verify.
-4. **Side channel**:
-   - out: `registerNotificationChannel(imChannel)` — QQ bot via the bot API (or a local bridge);
-   - in: a bridge receives IM messages and writes to the durable channel — answer a pending
-     `pi.question` (reuse `Questions`), else submit a new instruction to the session.
-   - `experimental/side-channel.ts` already provides the transport-agnostic core.
+### Mechanism (settled direction)
+1. **C**: a git worktree/branch of A plus a C-local overlay; automode-exempt inside C. Δ = its diff.
+2. **Hand-off**: C offers its diff; **A** applies it under A's own commit.
+3. **A/B**: the existing checkpoint/reload path runs afterwards, untouched.
+4. **Authorization**: an abstract provider per tier (T1/T2/T3) — no evidence system.
+5. **Side channel**: `experimental/side-channel.ts` (transport-agnostic) is the T1 entry surface —
+   IM out via notifications, IM in answers a durable `pi.question` or steers the session.
