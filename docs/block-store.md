@@ -19,6 +19,7 @@ rewrite of a giant document.
   "refs": [                      // WEAK relations (links, not containment)
     { "to": "b_evidence_1", "rel": "cites", "note": "why" }
   ],
+  "mentions": ["@captain"],      // A2A addressing: `@` (at) semantics, PUBLIC - everyone can see it
   "props": {},                   // kind-specific: role, seq, path, hash, status, …
   "author": "user | session:<id> | captain",
   "createdAt": 0,
@@ -40,6 +41,7 @@ rewrite of a giant document.
 | rel | meaning |
 |---|---|
 | `refer` | generic "see also" (default) |
+| `at` | `@`-mention of an agent/session (public addressing; the target is woken by a query) |
 | `cites` / `citedBy` | evidence ↔ claim |
 | `derives` / `derivedFrom` | plan → step, output → input |
 | `answers` / `askedBy` | a turn answering a question |

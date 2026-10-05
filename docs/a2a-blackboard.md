@@ -69,3 +69,18 @@ same shape.
 ## Not doing
 - No `mailbox` service, no IRC bridge, no `/collab` relay — those are extra systems, which the user
   rejected.
+
+## 5. Addressing = `@` (at) semantics, public to everyone (user)
+
+A2A does **not** send private messages. You **mention** a target on a block:
+
+- `@captain`, `@alice`, `@all` — written **on the block**, therefore **on the shared blackboard**.
+- **Everyone can see it.** Visibility is not a delivery decision; the mention is public by
+  construction, and any agent may read (and act on) it.
+- The mentioned agent does not receive a push; it is **woken by a query subscription**
+  (`mentions=@me and status=open`) — the same `wait` primitive as everything else.
+- `@all` is a broadcast mention (no per-recipient copy).
+
+So the block carries addressing, not a transport: `mentions: ["@captain"]` (or a `refs` entry with
+`rel: "at"` pointing at an agent block). This keeps **one** mechanism: write a block, mention who it
+is for, let the query wake the right agent.
