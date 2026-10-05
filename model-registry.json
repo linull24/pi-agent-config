@@ -1,0 +1,210 @@
+{
+  "$comment": "Model/source registry for the free layer. Selection is ACCEPTABLE-based, not a chain (docs/free-model-tiers.md). A source is a provider *plus* where its money/quota comes from; a model may override quality/budget. quality: sota|strong|usable|weak|rubbish. budget: daily-free|one-time-free|metered|subscription-flat|subscription-overage|shared-pool|own-relay. cost: zero|low|high (defaults from budget). Add credentials via env; this file never holds keys.",
+  "objectives": {
+    "classifier": {
+      "floor": "weak",
+      "ceiling": "free",
+      "prefer": "cost"
+    },
+    "lightest": {
+      "floor": "weak",
+      "ceiling": "free",
+      "prefer": "cost"
+    },
+    "hint": {
+      "floor": "usable",
+      "ceiling": "free",
+      "prefer": "cost"
+    },
+    "goal": {
+      "floor": "usable",
+      "ceiling": "free",
+      "prefer": "cost"
+    },
+    "daily": {
+      "floor": "usable",
+      "ceiling": "free",
+      "prefer": "cost"
+    },
+    "execution": {
+      "floor": "strong",
+      "ceiling": "any",
+      "prefer": "quality"
+    },
+    "research": {
+      "floor": "strong",
+      "ceiling": "any",
+      "prefer": "quality"
+    },
+    "supervisor": {
+      "floor": "strong",
+      "ceiling": "any",
+      "prefer": "quality"
+    },
+    "captain": {
+      "floor": "weak",
+      "ceiling": "free",
+      "prefer": "cost"
+    }
+  },
+  "sources": {
+    "deepseek": {
+      "provider": "deepseek",
+      "note": "Official DeepSeek API. Pay per use (metered) - this is NOT the research-institute program.",
+      "budget": "metered",
+      "cost": "low",
+      "quality": "strong",
+      "cache": {
+        "cheap": true,
+        "note": "context caching: cached input is much cheaper"
+      }
+    },
+    "openai-codex": {
+      "provider": "openai-codex",
+      "note": "ChatGPT subscription (Pro 20x) - use it, do not hammer it. Currently NO credentials (openai-codex not logged in).",
+      "budget": "subscription-flat",
+      "quality": "sota",
+      "softCap": true,
+      "available": false
+    },
+    "openai": {
+      "provider": "openai",
+      "note": "ChatGPT subscription; currently 403 subscription_sharing_user_not_eligible.",
+      "budget": "subscription-flat",
+      "quality": "sota",
+      "softCap": true,
+      "available": false
+    },
+    "agnes": {
+      "provider": "agnes",
+      "note": "apihub.agnes-ai.com \u2014 confirm the budget type; treated as low-cost metered for now.",
+      "budget": "metered",
+      "cost": "low",
+      "quality": "weak"
+    },
+    "openrouter": {
+      "provider": "openrouter",
+      "note": "Keep money in it, keep it UNUSED: expensive. Last resort only.",
+      "budget": "metered",
+      "cost": "high",
+      "quality": "usable"
+    },
+    "opencode-zen-free": {
+      "provider": "opencode-zen-free",
+      "note": "Keyless anonymous OpenCode Zen free tier (pi-opencode-direct). Egress-IP gated; 429 from this machine.",
+      "budget": "daily-free",
+      "quality": "weak",
+      "available": false
+    },
+    "cline-pass": {
+      "provider": "cline-pass",
+      "note": "Free bucket with CLINE_API_KEY; honest (free) models marked by the catalog.",
+      "budget": "daily-free",
+      "quality": "usable"
+    },
+    "zai": {
+      "provider": "zai",
+      "note": "glm-*-flash are free tier (ZAI_API_KEY).",
+      "budget": "daily-free",
+      "quality": "usable"
+    },
+    "groq": {
+      "provider": "groq",
+      "note": "Free tier (GROQ_API_KEY): groq/compound, compound-mini.",
+      "budget": "daily-free",
+      "quality": "usable"
+    },
+    "cerebras": {
+      "provider": "cerebras",
+      "note": "Free tier (CEREBRAS_API_KEY).",
+      "budget": "daily-free",
+      "quality": "usable"
+    },
+    "vercel-ai-gateway": {
+      "provider": "vercel-ai-gateway",
+      "note": "AI_GATEWAY_API_KEY; *-free ids (one-time/free credits).",
+      "budget": "one-time-free",
+      "quality": "usable"
+    },
+    "local": {
+      "provider": "ollama",
+      "note": "Local models (ollama / lm-studio): own relay, use freely.",
+      "budget": "own-relay",
+      "quality": "usable"
+    },
+    "deepseek-shanghai": {
+      "provider": "deepseek",
+      "note": "Shanghai research institute program: 5B tokens/day. A DIFFERENT source from the official API; not wired yet.",
+      "budget": "daily-free",
+      "quality": "strong",
+      "quota": {
+        "period": "daily",
+        "amount": "5B tokens"
+      },
+      "available": false
+    }
+  },
+  "models": [
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "quality": "strong"
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-v4-flash",
+      "quality": "strong"
+    },
+    {
+      "provider": "openai-codex",
+      "model": "gpt-6.1-sol",
+      "quality": "sota"
+    },
+    {
+      "provider": "openai-codex",
+      "model": "gpt-6-astra",
+      "quality": "sota"
+    },
+    {
+      "provider": "openai-codex",
+      "model": "gpt-6-luna",
+      "quality": "strong"
+    },
+    {
+      "provider": "agnes",
+      "model": "agnes-2.5-flash",
+      "quality": "weak"
+    },
+    {
+      "provider": "opencode-zen-free",
+      "model": "muse-spark-1.3-contributor-free",
+      "quality": "weak"
+    },
+    {
+      "provider": "opencode-zen-free",
+      "model": "deepseek-v4-flash-free",
+      "quality": "usable"
+    },
+    {
+      "provider": "cline-pass",
+      "model": "cline-free/deepseek-v4.1-flash",
+      "quality": "usable"
+    },
+    {
+      "provider": "zai",
+      "model": "glm-4.5-flash",
+      "quality": "usable"
+    },
+    {
+      "provider": "groq",
+      "model": "groq/compound",
+      "quality": "usable"
+    },
+    {
+      "provider": "openrouter",
+      "model": "deepseek/deepseek-v4-flash:free",
+      "quality": "usable",
+      "cost": "zero"
+    }
+  ]
+}
