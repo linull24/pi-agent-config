@@ -103,6 +103,32 @@ These feed the **acceptable** selector:
 
 Note `cost` in the acceptable model is therefore **not** a static tier but `(budgetType, quotaLeft)`.
 
+
+### 3c-bis. Refinements (user)
+
+- **Quota period matters**: `daily-free` is one shape; there are also **weekly** / monthly / one-shot
+  allowances. Track the *period* alongside the amount.
+- **`subscription-flat` is not "hammer it"**: e.g. OpenAI **Pro 20x** — we *should* use it
+  (白用白不用) but **not too hard**; fair-use / rate limits / abuse heuristics mean it is a **prefer
+  with a soft cap**, not unlimited. So type 4 gets `conserve: false` **but** a `softCap` (burst ok,
+  sustain gently) — it still needs consideration.
+- **Source identity matters**: the DeepSeek `daily-free` we are getting is a **Shanghai research
+  institute** program (not the official DeepSeek API) — a distinct source with its own quota, key and
+  expiry. Record sources explicitly, not just providers.
+
+### 3c-ter. NEW role: **subscription maintenance** (订阅维护)
+
+Quotas, keys, renewals and overage/abuse are a *job of their own*, so they get their own
+**role/agent/task** rather than being implicit in routing:
+
+- watches quotas (daily/weekly/monthly resets, one-time credit left, plan usage vs soft cap),
+- rotates/refreshes keys and OAuth tokens, and flags expired/blocked sources,
+- keeps "money in OpenRouter" but keeps it *unused* (last resort),
+- escalates before a metered source is used, and never lets a source silently run dry,
+- owns the provider registry's `budget` / `quota` / `conserve` / `softCap` fields.
+
+Consumers: the acceptable selector reads the registry the maintenance role keeps fresh.
+
 ## 4. Acceptance for the first cut (task #1)
 
 1. A registry listing free models with `source`, `quality`, `provider`, `model`, `enabled`.
