@@ -125,6 +125,12 @@
         "deepseek/deepseek-flash"
       ],
       "prompt": "hint/prompt.md"
+    },
+    "goal": {
+      "model": [
+        "deepseek/deepseek-flash"
+      ],
+      "prompt": "goal/prompt.md"
     }
   },
   "cron": {

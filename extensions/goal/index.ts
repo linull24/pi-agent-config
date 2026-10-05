@@ -129,24 +129,28 @@ function extractText(output: string): string {
 	return last;
 }
 
+/** Path of the `goal` evaluator role prompt (roles/<prompt> from agent-config). */
+function goalPromptPath(): string | undefined {
+	try {
+		const config = JSON.parse(fs.readFileSync(path.join(getAgentDir(), "agent-config.json"), "utf-8")) as {
+			roles?: Record<string, { prompt?: string }>;
+		};
+		const rel = config.roles?.goal?.prompt;
+		if (typeof rel === "string" && rel.length > 0) {
+			const promptPath = path.join(getAgentDir(), "roles", rel);
+			if (fs.existsSync(promptPath)) return promptPath;
+		}
+	} catch {
+		// no role prompt
+	}
+	return undefined;
+}
+
 /** Ask an independent model whether the condition holds. */
 async function evaluate(condition: string, transcript: string, signal?: AbortSignal): Promise<Verdict> {
-	const prompt = [
-		"You are a strict goal evaluator. Decide whether the completion condition is satisfied.",
-		"The conversation below is the ONLY evidence; you cannot run tools or read files.",
-		"",
-		`Condition: ${condition}`,
-		"",
-		"Conversation:",
-		transcript,
-		"",
-		'Reply with exactly one JSON object: {"verdict":"met"|"not-met"|"impossible"|"blocked","reason":"<short reason>"}.',
-		"met = the condition demonstrably holds.",
-		"impossible = it can never be satisfied as stated.",
-		"blocked = the assistant needs a decision or confirmation from the user, or is genuinely stuck and cannot progress without help — do NOT continue without the user.",
-		"not-met = more work can still be done autonomously.",
-	].join("\n");
-	const invocation = piInvocation([
+	// The evaluator instruction lives in the role prompt (roles/goal/prompt.md); only data is inline.
+	const prompt = [`Condition: ${condition}`, "", "Conversation:", transcript].join("\n");
+	const args = [
 		"--mode",
 		"json",
 		"-p",
@@ -155,8 +159,11 @@ async function evaluate(condition: string, transcript: string, signal?: AbortSig
 		"--no-tools",
 		"--model",
 		EVALUATOR_MODEL,
-		prompt,
-	]);
+	];
+	const promptPath = goalPromptPath();
+	if (promptPath !== undefined) args.push("--append-system-prompt", promptPath);
+	args.push(prompt);
+	const invocation = piInvocation(args);
 	return await new Promise<Verdict>((resolve) => {
 		let settled = false;
 		const done = (verdict: Verdict): void => {
