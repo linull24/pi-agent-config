@@ -1,2 +1,0 @@
-#!/bin/sh
-exec node /Users/linull/.pi/agent/sessiond/client.mjs "$@"
