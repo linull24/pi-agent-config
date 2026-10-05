@@ -171,7 +171,13 @@ not declare its own requirement).
 6. **Side channel**: `experimental/side-channel.ts` (transport-agnostic) is the T1 entry surface —
    IM out via notifications, IM in answers a durable `pi.question` or steers the session.
 
-### Agent View: the C divider (future)
+### Agent View: captain (settled)
+Our Agent View feature is called **captain**: the single, stable entry at the top of the view.
+The user can **rename** it (`Ctrl+R`), and the owning C source persists the name
+(`AgentViewSource.rename?(sessionId, name)`). The C side registers a source:
+`registerAgentViewSource({ id, label: "captain", list })`, using `captainEntry()` for the row shape.
+
+### Agent View: the C divider (superseded by the layout above)
 The agents page keeps its activity-time sort and adds a **divider**: **pi (A) sessions on top**,
 then **C below**. The C section is a **single entry** — one session, one entry point — not one row per
 gateway; the different gateways live *inside* that session and are visible to the LLM operating in C.
