@@ -1,0 +1,6 @@
+{
+  "autoMode": {
+    "classifierModel": "deepseek/deepseek-flash",
+    "classifierReasoningLevel": "low"
+  }
+}

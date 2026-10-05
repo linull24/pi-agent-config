@@ -1,0 +1,17 @@
+{
+  "lastChangelogVersion": "1.0.2",
+  "extensions": [
+    "+builtin:codemode"
+  ],
+  "deviceId": "3cd83ad0-50a5-47d8-90a4-d277ac1b8297",
+  "packages": [
+    "npm:@patimweb/pi-cron",
+    "npm:@fradser/pi-monitor",
+    "npm:@monotykamary/pi-supervisor",
+    "npm:@czottmann/pi-automode",
+    "npm:pi-scratchpad"
+  ],
+  "defaultProvider": "router",
+  "defaultModel": "auto",
+  "defaultThinkingLevel": "medium"
+}

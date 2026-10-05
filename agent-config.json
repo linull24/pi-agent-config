@@ -1,0 +1,70 @@
+{
+  "roles": {
+    "classifier": {
+      "model": ["deepseek/deepseek-flash"]
+    },
+    "supervisor": {
+      "model": ["openai-codex/gpt-6.1-sol", "openai/gpt-6.1-sol"]
+    },
+    "session": {
+      "model": ["router/auto"]
+    },
+    "lightest": {
+      "model": ["agnes/agnes-2.5-flash"]
+    },
+    "daily": {
+      "model": ["deepseek/deepseek-flash"]
+    },
+    "research": {
+      "model": ["openai-codex/gpt-6-astra", "openai/gpt-6-astra"]
+    },
+    "failover": {
+      "model": ["openai-codex/gpt-6-luna", "openai/gpt-6-luna"]
+    },
+    "websearch": {
+      "model": ["deepseek/deepseek-flash", "openai/gpt-6-luna", "duckduckgo"]
+    },
+    "scout": {
+      "model": ["deepseek/deepseek-flash"],
+      "prompt": "scout/prompt.md",
+      "agent": {
+        "description": "Fast codebase recon that returns compressed context for handoff to other agents",
+        "tools": ["read", "grep", "find", "ls", "bash"]
+      }
+    },
+    "planner": {
+      "model": ["openai-codex/gpt-6-astra", "openai/gpt-6-astra"],
+      "prompt": "planner/prompt.md",
+      "agent": {
+        "description": "Creates implementation plans from context and requirements (hard thinking)",
+        "tools": ["read", "grep", "find", "ls"]
+      }
+    },
+    "reviewer": {
+      "model": ["openai-codex/gpt-6-astra", "openai/gpt-6-astra"],
+      "prompt": "reviewer/prompt.md",
+      "agent": {
+        "description": "Code review specialist for quality and security analysis (hard thinking)",
+        "tools": ["read", "grep", "find", "ls", "bash"]
+      }
+    },
+    "worker": {
+      "model": ["deepseek/deepseek-flash"],
+      "prompt": "worker/prompt.md",
+      "agent": {
+        "description": "General-purpose execution subagent with full capabilities, isolated context"
+      }
+    },
+    "researcher": {
+      "model": ["openai-codex/gpt-6-astra", "openai/gpt-6-astra"],
+      "prompt": "researcher/prompt.md",
+      "agent": {
+        "description": "Deep research and hard reasoning on a question, paper, or design trade-off",
+        "tools": ["read", "grep", "find", "ls", "bash"]
+      }
+    }
+  },
+  "cron": {
+    "pi-upstream-check": "daily"
+  }
+}

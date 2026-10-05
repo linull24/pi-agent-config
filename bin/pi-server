@@ -1,0 +1,4 @@
+#!/bin/sh
+# Native pi durable-session server. Physical model (no virtual router, no OpenAI).
+exec env PI_EXPERIMENTAL=1 PI_SERVER_DIR="${PI_SERVER_DIR:-$HOME/.pi/server}" \
+  "$HOME/pi-src/pi-test.sh" server --provider deepseek --model deepseek-flash "$@"

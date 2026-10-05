@@ -1,0 +1,14 @@
+{
+  "openai": {
+    "type": "oauth",
+    "access": "<paste-access-token-or-run /login>",
+    "refresh": "<paste-refresh-token>",
+    "expires": 0,
+    "clientId": "<oauth-client-id>",
+    "scopes": []
+  },
+  "deepseek": {
+    "type": "api_key",
+    "key": "<DEEPSEEK_API_KEY>"
+  }
+}

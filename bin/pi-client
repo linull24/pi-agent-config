@@ -1,0 +1,2 @@
+#!/bin/sh
+exec env PI_EXPERIMENTAL=1 "$HOME/pi-src/pi-test.sh" client "$@"

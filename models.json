@@ -1,0 +1,29 @@
+{
+  "providers": {
+    "agnes": {
+      "baseUrl": "https://apihub.agnes-ai.com/v1",
+      "api": "openai-completions",
+      "apiKey": "!grep -m1 '^HERMES_CUSTOM_APIHUB_AGNES_AI_COM_API_KEY=' ~/.hermes/.env | cut -d= -f2-",
+      "models": [
+        {
+          "id": "agnes-3.0-flash",
+          "name": "Agnes 3.0 Flash",
+          "input": ["text"],
+          "reasoning": false,
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
+          "contextWindow": 128000,
+          "maxTokens": 32768
+        },
+        {
+          "id": "agnes-2.5-flash",
+          "name": "Agnes 2.5 Flash",
+          "input": ["text"],
+          "reasoning": false,
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
+          "contextWindow": 128000,
+          "maxTokens": 32768
+        }
+      ]
+    }
+  }
+}

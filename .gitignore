@@ -1,0 +1,37 @@
+# Secrets — never committed. Use the *.template files instead.
+auth.json
+auth.json.bak
+auth.json.bak-*
+.env
+.env.*
+!.env.template
+!.env.example
+*.pem
+*.key
+
+# Machine-specific / regenerable
+models-store.json
+install/
+npm/
+node_modules/
+bin/pi
+bin/fd
+
+# Runtime state
+sessions/
+experimental/
+checkpoints/
+cron/
+sessiond/
+tmux/
+constraints-state.json
+heartbeat.json
+self-refine.json
+*.log
+logs/
+
+# Generated from agent-config.json
+agents/
+
+# OS / editor
+.DS_Store
