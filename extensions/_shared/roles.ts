@@ -152,6 +152,36 @@ export function resolveRole(ctx: ExtensionContext, name: string): ResolvedModel 
 	);
 }
 
+/**
+ * Every credentialed candidate for a role, in order — the role's **fallback chain**.
+ *
+ * `resolveRole` answers "which model now"; this answers "which models, in what order", so a caller
+ * (the router) can advance to the next one after a retryable failure (429 / quota / overload) and
+ * only then hop to the daily fallback.
+ */
+export function resolveRoleChain(ctx: ExtensionContext, name: string): ResolvedModel[] {
+	const roles = loadConfig().roles;
+	const lists: Array<readonly string[] | undefined> = [
+		roles[name]?.model,
+		DEFAULT_CONFIG.roles[name]?.model,
+		roles.daily?.model,
+		DEFAULT_CONFIG.roles.daily?.model,
+	];
+	const out: ResolvedModel[] = [];
+	const seen = new Set<string>();
+	for (const list of lists) {
+		for (const spec of list ?? []) {
+			const resolved = resolveModel(ctx, [spec]);
+			if (resolved === undefined) continue;
+			const key = `${resolved.provider}/${resolved.id}`;
+			if (seen.has(key)) continue;
+			seen.add(key);
+			out.push(resolved);
+		}
+	}
+	return out;
+}
+
 /** Read a role prompt file, resolved under roles/. */
 export function readPrompt(relativePath: string | undefined): string | undefined {
 	if (!relativePath) return undefined;

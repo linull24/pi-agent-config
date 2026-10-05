@@ -43,6 +43,36 @@ Seed classification (rough, per the user): **agnes = weak**, **deepseek = strong
 - A **free policy** knob: `off | prefer-free | free-only` (per role or global). `prefer-free` tries
   free first and falls back to paid; `free-only` never spends.
 
+
+## 3b. Semantics: **acceptable**, not a chain (user)
+
+A raw fallback chain (try next in order) is wrong, because the **bottom line changes**:
+
+- sometimes the bottom line is **"it must work"** (能用) — cost is irrelevant;
+- sometimes it is **"save money"** (省钱) — quality may drop but not below a floor;
+- and **rubbish/below-weak models may make things WORSE**, so they are never an acceptable fallback.
+
+Example: OpenRouter always has money, **but we avoid it because it is expensive**. When DeepSeek's
+official API runs out of money, the right move is to *escalate to GPT*, not to fall down a list.
+
+So selection is **constraint comparison**, not ordering:
+
+- **Candidate attributes**: `quality` (sota/strong/usable/weak/rubbish), `cost` (free/cheap/expensive),
+  `availability` (key / quota / rate-limit state).
+- **Objective per turn/role**: a `floor` (minimum quality) + a `budget` (cost ceiling) + a `prefer`
+  (optimize quality vs cost).
+  - `must-work`: floor = strong, budget = any.
+  - `cheap`: budget = free/cheap, floor = usable (or weak for assist work).
+- **Acceptable(candidate)** = `quality >= floor && cost <= budget && available`.
+- **Choose**: among acceptable, take the one the objective prefers (cheapest that clears the floor,
+  or the best when must-work). If **none** is acceptable, decide explicitly: **escalate** (raise the
+  budget) or **degrade** (lower the floor) — never silently, and never into `rubbish`.
+- **Availability is dynamic**: DeepSeek "no money"/429 ⇒ not acceptable right now ⇒ escalate.
+- **Rubbish is a hard floor**: never selected, never a fallback.
+
+This replaces "fallback chain" as the mental model; a role/registry may still *list* candidates in a
+preferred order, but resolution is `acceptable`-based with an explicit objective.
+
 ## 4. Acceptance for the first cut (task #1)
 
 1. A registry listing free models with `source`, `quality`, `provider`, `model`, `enabled`.
