@@ -84,7 +84,7 @@ Rules:
 - Security review stays independent (already true: `@czottmann/pi-automode` classifier runs in its
   own context).
 
-## C is the playground, A is the base — promotion via A/B, IM as the side channel
+## (superseded) C as playground, A as base — see the settled model below
 
 Corrected model (this supersedes the earlier "A is the playground" reading):
 
@@ -184,3 +184,65 @@ gateway; the different gateways live *inside* that session and are visible to th
 Because C is an independent process ("not our concern"), the page needs a **C source adapter**
 (registered like a channel adapter) that yields the one C entry, plus an `origin` marker
 (`"pi" | "c"`).
+
+## Side channel (the out-of-band IM path) — spec
+
+**Why.** The TUI runs on the computer; the user walks away. The side channel is how the agent reaches
+them (outbound) and how they reach back from a phone (inbound). It is the **T1 entry surface** of the
+authorization model and the practical way to keep a run alive while away.
+
+### Shape
+```
+inbound:   IM adapter ──► routeInboundChannelMessage ──► pending pi.question ? ──► Questions.answer
+                                                          else                     ──► AgentController.steer
+outbound:  emitAgentNotification ──► every registered adapter ──► IM (QQ bot, …)
+```
+
+### Interfaces (built)
+`experimental/side-channel.ts` — transport-agnostic core:
+```ts
+export interface AgentChannelMessage { channel: string; sessionId: string | undefined; text: string; from?: string }
+export interface SideChannelDeps {
+  hasPendingQuestion(sessionId: string): Promise<boolean>;
+  answerQuestion(sessionId: string, text: string): Promise<{ ok: boolean; error?: string }>;
+  steer(sessionId: string, text: string): Promise<{ accepted: boolean; error?: string }>;
+}
+export function routeInboundChannelMessage(message, deps): Promise<{ outcome: "answered" | "steered" | "failed"; error?: string }>;
+export interface AgentChannelAdapter { readonly id: string; start(onMessage): void | Promise<void>; send(event): void; stop?(): void }
+export function registerChannelAdapter(adapter, onMessage?): () => void;   // also fans agent events out
+export function startChannelAdapters(onMessage): void;
+export function stopChannelAdapters(): void;
+```
+`experimental/side-channel-sessions.ts` — daemon binding:
+```ts
+export interface SessionChannelServices { hasPendingQuestion(); answer(text); steer(text) }
+export type OpenSessionChannelServices = (sessionId: string) => SessionChannelServices | Promise<SessionChannelServices>;
+export function createSideChannelDeps(open: OpenSessionChannelServices): SideChannelDeps;
+export function createSessionChannelOpener(source, keys, readPendingQuestion): OpenSessionChannelServices;
+```
+
+### Rules
+- **Outbound**: every registered adapter receives `needs-input` / `finished` / `failed` (emitted by the
+  client poller on state transitions and by the durable `request_input` tool).
+- **Inbound**: a message answers the session's pending durable `pi.question`, otherwise it **steers**
+  the session (a new instruction). A missing session id or empty text is a failure.
+- Sessions are addressed **by id**; an adapter derives the target session from its own pairing.
+- **No evidence system** (no tickets, no hash binding) — same rule as promotion.
+- An adapter's `send`/`list` must not throw; the emitter and the router swallow channel errors.
+
+### Built
+- core `b15f31d19` · daemon binding `7be5a0240` · tests `test/side-channel*.test.ts`.
+
+### Remaining
+1. **Daemon wiring**: `startChannelAdapters((message) => routeInboundChannelMessage(message, createSideChannelDeps(createSessionChannelOpener(source, { Questions, AgentController }, readPendingQuestion))))`.
+   Needs the concrete `readPendingQuestion(sessionId)` (read the session's `pi.question` document).
+2. **QQ bot adapter**: out via the bot API; in via the gateway WebSocket → `AgentChannelMessage`.
+   Credentials come from `~/.hermes/.env` (`QQ_APP_ID` / `QQ_CLIENT_SECRET`) **read at request time and
+   never copied into C**.
+3. **Pairing**: map an IM conversation → a `sessionId` (reuse hermes's pairing shape, e.g.
+   `platforms/pairing/qqbot-approved.json`).
+4. **Action buttons** (when the platform supports them) → a T1 authorization provider.
+
+### Relation to captain (C)
+The IM platform is captain's *gateway*; the side channel is our pi-side entry surface. Captain may host
+the QQ transport, so the adapter interface is written so **either side** can implement it.
