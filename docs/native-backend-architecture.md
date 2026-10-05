@@ -170,3 +170,10 @@ not declare its own requirement).
    that could pollute.
 6. **Side channel**: `experimental/side-channel.ts` (transport-agnostic) is the T1 entry surface —
    IM out via notifications, IM in answers a durable `pi.question` or steers the session.
+
+### Agent View: the C divider (future)
+The agents page keeps its activity-time sort and adds a **divider** separating **C's items** from
+pi's (A's) sessions; each section stays time-ordered. Because C is an independent process ("not our
+concern"), the page needs a **C source adapter** — registered like a channel adapter — that lists C's
+sessions/tasks, and an `origin` marker (`"pi" | "c"`) per entry. Open: section order, how a C item is
+identified, and whether the divider surfaces C's status.
