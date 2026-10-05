@@ -146,13 +146,27 @@ A provider answers a tiered yes / no / pending, and nothing else flows through i
 Providers are pluggable and independent of both C and the apply path. **A decides the tier** (C does
 not declare its own requirement).
 
-### Still open
-- **C lifecycle**: when C is created and destroyed, and where its branch lives.
+### C lifecycle (settled)
+- **C is a system-level, absolutely persistent process** — a replacement for hermes (an always-on
+  gateway), independent of pi sessions. It is not owned, started, or stopped by a TUI session; it
+  lives outside us.
+- **C is never destroyed.** It is permanent infrastructure.
+- **C solves its own problems.** Baseline drift, conflicts, its own garbage collection, and internal
+  failures are C's concern — not the promotion path's.
+- **Δ is a byproduct.** C's purpose is the system-level gateway; producing promotable changes is
+  incidental output, expressed as a **git** delta.
+- **No pollution.** C must not pollute A or the system. Pollution = writing outside the delta's
+  declared scope, leaving side effects behind (processes, files, launch agents), leaking secrets, or
+  weakening safety controls. Every promotion therefore still goes through review + authorization
+  (the three tiers), and the applier is **A**, never C.
 
 ### Mechanism (settled direction)
-1. **C**: a git worktree/branch of A plus a C-local overlay; automode-exempt inside C. Δ = its diff.
-2. **Hand-off**: C offers its diff; **A** applies it under A's own commit.
-3. **A/B**: the existing checkpoint/reload path runs afterwards, untouched.
-4. **Authorization**: an abstract provider per tier (T1/T2/T3) — no evidence system.
-5. **Side channel**: `experimental/side-channel.ts` (transport-agnostic) is the T1 entry surface —
+1. **C**: an independent, absolutely persistent system process (hermes replacement), never destroyed,
+   self-solving. It is automode-exempt on its own surfaces.
+2. **Δ**: whatever C wants promoted is expressed as a git delta — a declared subset, via git.
+3. **Hand-off**: C offers the delta; **A** applies it under A's own commit.
+4. **A/B**: the existing checkpoint/reload path runs afterwards, untouched.
+5. **Authorization**: an abstract provider per tier (T1/T2/T3) — no evidence system — gating anything
+   that could pollute.
+6. **Side channel**: `experimental/side-channel.ts` (transport-agnostic) is the T1 entry surface —
    IM out via notifications, IM in answers a durable `pi.question` or steers the session.
