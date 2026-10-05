@@ -35,7 +35,7 @@ type GoalState = {
 	at?: number;
 };
 
-type Verdict = { verdict: "met" | "not-met" | "impossible"; reason: string };
+type Verdict = { verdict: "met" | "not-met" | "impossible" | "blocked"; reason: string };
 
 /** The latest goal state recorded in the session, if any. */
 function readGoal(ctx: ExtensionContext | { sessionManager: ExtensionContext["sessionManager"] }): GoalState {
@@ -140,8 +140,11 @@ async function evaluate(condition: string, transcript: string, signal?: AbortSig
 		"Conversation:",
 		transcript,
 		"",
-		'Reply with exactly one JSON object: {"verdict":"met"|"not-met"|"impossible","reason":"<short reason>"}.',
-		"met = the condition demonstrably holds. impossible = it can never be satisfied as stated.",
+		'Reply with exactly one JSON object: {"verdict":"met"|"not-met"|"impossible"|"blocked","reason":"<short reason>"}.',
+		"met = the condition demonstrably holds.",
+		"impossible = it can never be satisfied as stated.",
+		"blocked = the assistant needs a decision or confirmation from the user, or is genuinely stuck and cannot progress without help — do NOT continue without the user.",
+		"not-met = more work can still be done autonomously.",
 	].join("\n");
 	const invocation = piInvocation([
 		"--mode",
@@ -176,7 +179,14 @@ async function evaluate(condition: string, transcript: string, signal?: AbortSig
 			if (match) {
 				try {
 					const parsed = JSON.parse(match[0]) as { verdict?: string; reason?: string };
-					const verdict = parsed.verdict === "met" ? "met" : parsed.verdict === "impossible" ? "impossible" : "not-met";
+					const verdict =
+						parsed.verdict === "met"
+							? "met"
+							: parsed.verdict === "impossible"
+								? "impossible"
+								: parsed.verdict === "blocked"
+									? "blocked"
+									: "not-met";
 					return done({ verdict, reason: parsed.reason ?? "" });
 				} catch {
 					// fall through
@@ -239,6 +249,14 @@ export default function (pi: ExtensionAPI) {
 				verdict.verdict === "met" ? `◎ goal met — ${verdict.reason}` : `goal impossible — ${verdict.reason}`,
 				verdict.verdict === "met" ? "info" : "warning",
 			);
+			return;
+		}
+
+		if (verdict.verdict === "blocked") {
+			// Hand control back to the user with the goal still set; evaluation resumes on the next prompt.
+			writeGoal(pi, { ...state, lastReason: verdict.reason });
+			if (ctx.hasUI) ctx.ui.setStatus("goal", `◎ goal paused — needs your input: ${verdict.reason}`);
+			ctx.ui.notify(`◎ goal paused — needs your input: ${verdict.reason}`, "warning");
 			return;
 		}
 
