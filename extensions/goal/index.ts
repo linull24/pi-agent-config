@@ -129,6 +129,8 @@ function extractText(output: string): string {
 	return last;
 }
 
+const SUPERVISOR_SESSION = path.join(getAgentDir(), "supervisor", "session.jsonl");
+
 /** Path of the `goal` evaluator role prompt (roles/<prompt> from agent-config). */
 function goalPromptPath(): string | undefined {
 	try {
@@ -154,7 +156,9 @@ async function evaluate(condition: string, transcript: string, signal?: AbortSig
 		"--mode",
 		"json",
 		"-p",
-		"--no-session",
+		// Reuse one long-lived supervisor session for goal supervision and hints.
+		"--session",
+		SUPERVISOR_SESSION,
 		"--no-extensions",
 		"--no-tools",
 		"--model",
