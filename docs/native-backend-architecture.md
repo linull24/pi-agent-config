@@ -83,3 +83,51 @@ Rules:
   future one long-lived session rather than a fresh process per call.
 - Security review stays independent (already true: `@czottmann/pi-automode` classifier runs in its
   own context).
+
+## C is the playground, A is the base — promotion via A/B, IM as the side channel
+
+Corrected model (this supersedes the earlier "A is the playground" reading):
+
+- **C = playground.** The agent owns it and has high autonomy there: it can fix *itself*, wire up
+  new integrations (QQ bot / IM gateway), and experiment. C is isolated and disposable — breaking
+  it must not touch A.
+- **A = base.** The stable runtime the user relies on. It changes only when a change is *promoted*
+  out of C.
+- **A/B = the promotion gate.** A change moves `C → A` through the normal mechanism: apply →
+  `heartbeat` checkpoint (B) → verify → keep, else roll back.
+- **IM = the side channel.** Out-of-band in both directions, for when the TUI is running on the
+  computer but the user has walked away:
+  - outbound: `emitAgentNotification` (`needs-input` / `finished` / `failed`) → an IM channel;
+  - inbound: an IM message answers a durable `pi.question`, or submits a new instruction, and the
+    session resumes.
+
+### The sweet-spot scenario
+Leave a TUI running at the desk, go out. Something breaks. The agent attempts the fix in **C**. If it
+needs a decision it emits a notification → the user answers from the phone over IM → the agent
+continues. A validated fix is **promoted to A** through A/B (checkpoint → verify → reload), so it
+survives the next restart.
+
+### Who controls C
+- The **agent** controls C — that is what "playground" means: full autonomy inside C.
+- The **user** controls the promotion `C → A`, mediated by the A/B gate (checkpoint + verify + reload).
+- The **IM side channel** is the user's remote override while away.
+
+### Control layers (what the playground autonomy does *not* include)
+| Layer | Owner | Mechanism |
+|---|---|---|
+| C (playground) | agent | isolated worktree + its own extension/config overlay |
+| A (base) | user, via promotion | A/B gate: checkpoint → verify → reload |
+| B (checkpoints) | daemon | `heartbeat` |
+| side channel | user | `emitAgentNotification` (out) + durable `pi.question` (in) |
+| secrets / credentials | user | never copied into C; read at request time only |
+
+### Mechanism v0 (what to build)
+1. **C playground**: worktree (`<repo>/.pi/worktrees/agent-*`) + a C-local extension/config overlay,
+   with automode exempt inside C. (Worktree isolation already exists for dispatched agents.)
+2. **Promotion** `/promote`: diff C → apply to A → `heartbeat` checkpoint → verify (alive + tests) →
+   keep, else rollback. Sensitive surfaces (credentials, channel registration, safety rules) require
+   explicit user approval.
+3. **Side channel**:
+   - out: `registerNotificationChannel(imChannel)` — QQ bot via the bot API (or a local bridge);
+   - in: a bridge receives IM messages and writes to the durable channel — answer a pending
+     `pi.question` (reuse `Questions`), else submit a new instruction to the session.
