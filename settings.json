@@ -10,7 +10,9 @@
     "npm:@monotykamary/pi-supervisor",
     "npm:@czottmann/pi-automode",
     "npm:pi-scratchpad",
-    "npm:@juicesharp/rpiv-ask-user-question"
+    "npm:@juicesharp/rpiv-ask-user-question",
+    "npm:@tintinweb/pi-tasks",
+    "npm:pi-opencode-direct"
   ],
   "defaultProvider": "router",
   "defaultModel": "auto",
